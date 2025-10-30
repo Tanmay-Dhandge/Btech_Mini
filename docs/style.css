@@ -1,0 +1,38 @@
+/* Add these new styles to the end of your style.css file */
+
+.url-setter {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    border: 1px solid #eee;
+    text-align: center;
+}
+.url-setter p {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 10px;
+}
+.url-setter input {
+    width: 80%;
+    max-width: 400px;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+    margin-right: 10px;
+}
+.url-setter button {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 6px;
+    background: #667eea;
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+.url-setter button:hover {
+    background: #5a6dcb;
+}
