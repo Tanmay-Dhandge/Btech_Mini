@@ -1,38 +1,35 @@
-// --- ⚠️ 1. CONFIGURE YOUR MQTT BROKER ⚠️ ---
+// --- ⚠️ 1. CONFIGURE YOUR MQTT BROKER (Existing Code) ⚠️ ---
 const MQTT_BROKER_URL = "afc8a0ac2ccf462c8f92b932403518df.s1.eu.hivemq.cloud";
 const MQTT_PORT = 8884; // Your WebSocket port (usually 8884 for HiveMQ)
 const MQTT_USER = "hivemq.webclient.1761751067946";
 const MQTT_PASS = "wy.b7f8cB*0GTUW&4Ha:";
-// ---
 
-// --- MQTT Client ---
+// --- ⚠️ 2. CONFIGURE YOUR RENDER BACKEND (NEW) ⚠️ ---
+// Paste the URL of your Render service
+const RENDER_BACKEND_URL = "https://live-videofeed.onrender.com";
+// -----------------------------------------------------
+
+// --- MQTT Client (Existing Code) ---
 var client = new Paho.MQTT.Client(MQTT_BROKER_URL, MQTT_PORT, "web-client-" + parseInt(Math.random() * 100));
 client.onConnectionLost = onConnectionLost;
 client.onMessageArrived = onMessageArrived;
 
-// --- DOM Elements ---
+// --- DOM Elements (Existing Code) ---
 let statusText = document.getElementById('status');
 let statusDot = document.getElementById('status-dot');
-
-// Dashboard controls
 let fanControl = document.getElementById("fan-control");
 let lightControl = document.getElementById("light-control");
 let fanStatus = document.getElementById("fan-status");
 let lightStatus = document.getElementById("light-status");
 let modeToggle = document.getElementById("mode-toggle");
+// ... (all your other sensor spans like insideTemp, etc.) ...
 
-// Surveillance controls
-let feedUrlInput = document.getElementById('feedUrlInput');
-let setFeedUrlButton = document.getElementById('setFeedUrlButton');
+// --- NEW: Surveillance Elements ---
 let liveFeed = document.getElementById('liveFeed');
 
-// --- Key for Browser Storage ---
-const STORAGE_KEY = 'liveFeedUrl';
-
 // -------------------------------------------------------------------
-// --- Page Navigation ---
+// --- Page Navigation (Existing Code) ---
 // -------------------------------------------------------------------
-
 function showView(viewName) {
     if (viewName === 'dashboard') {
         document.getElementById('dashboard-view').style.display = 'block';
@@ -48,41 +45,37 @@ function showView(viewName) {
 }
 
 // -------------------------------------------------------------------
-// --- Surveillance Logic (NEW) ---
+// --- NEW: Socket.IO Video Logic ---
 // -------------------------------------------------------------------
+// This connects to your Render video relay
+const videoSocket = io(RENDER_BACKEND_URL);
 
-// Saves the new URL and updates the image
-function setFeedUrl() {
-    const baseUrl = feedUrlInput.value.trim();
-    if (!baseUrl) {
-        alert("Please paste the Pinggy URL (e.g., https://...)");
-        return;
-    }
+videoSocket.on('connect', () => {
+    console.log('✅ Connected to Render video socket.');
+    liveFeed.alt = "Connected, waiting for video stream...";
+});
 
-    // Save the base URL to the browser's local storage
-    localStorage.setItem(STORAGE_KEY, baseUrl);
-    
-    // Update the image source
-    // We automatically add the "/video" part for you
-    liveFeed.src = baseUrl + "/video";
-}
+videoSocket.on('disconnect', () => {
+    console.log('❌ Disconnected from Render video socket.');
+    liveFeed.alt = "Feed disconnected. Trying to reconnect...";
+});
 
-// Handles a broken video feed
-function handleFeedError() {
-    liveFeed.src = ''; // Clear the broken source
-    liveFeed.alt = 'Feed not available. Check URL or click "Visit Site" in a new tab.';
-    console.error("Feed error. Make sure your Python server is running and you clicked 'Visit Site' on the warning page.");
-}
+// This is the main event! It fires every time a new frame arrives
+videoSocket.on('new_frame_for_viewers', (data) => {
+    // 'data.frame' contains the base64 string
+    // 'data:image/jpeg;base64,' tells the browser to display this string as an image
+    liveFeed.src = 'data:image/jpeg;base64,' + data.frame;
+});
 
 // -------------------------------------------------------------------
-// --- MQTT Logic ---
+// --- MQTT Logic (This is all your existing code) ---
+// --- LEAVE ALL OF THIS CODE AS-IS ---
 // -------------------------------------------------------------------
-
 function connectMqtt() {
     console.log("Connecting to MQTT broker...");
     statusText.textContent = "Connecting...";
     statusDot.style.background = "#f59e0b"; // Yellow
-
+    // ... (rest of your existing function) ...
     client.connect({
         userName: MQTT_USER,
         password: MQTT_PASS,
@@ -91,23 +84,23 @@ function connectMqtt() {
         onFailure: onConnectionLost
     });
 }
-
 function onConnect() {
+    // ... (rest of your existing function) ...
     console.log("✅ Connected to MQTT");
     statusText.textContent = "Connected";
     statusDot.style.background = "#10b981"; // Green
     client.subscribe("project/status");
     client.subscribe("project/sensors");
 }
-
 function onConnectionLost(responseObject) {
-    console.log("❌ Connection lost: " + responseObject.errorMessage);
+    // ... (rest of your existing function) ...
+    console.log("❌ MQTT Connection lost: " + responseObject.errorMessage);
     statusText.textContent = "Disconnected";
     statusDot.style.background = "#ef4444"; // Red
     setTimeout(connectMqtt, 3000);
 }
-
 function onMessageArrived(message) {
+    // ... (rest of your existing function) ...
     try {
         const data = JSON.parse(message.payloadString);
         if (message.destinationName === "project/sensors") {
@@ -119,10 +112,8 @@ function onMessageArrived(message) {
         console.error("Error parsing JSON message:", e);
     }
 }
-
-// --- MQTT Dashboard Functions ---
-
 function updateSensorReadings(data) {
+    // ... (all your existing sensor logic) ...
     document.getElementById('insideTemp').textContent = data.insideTemp.toFixed(1);
     document.getElementById('insideHum').textContent = data.insideHum.toFixed(1);
     document.getElementById('outsideTemp').textContent = data.outsideTemp.toFixed(1);
@@ -130,8 +121,8 @@ function updateSensorReadings(data) {
     document.getElementById('outsidePress').textContent = data.outsidePress.toFixed(0);
     document.getElementById('lightLux').textContent = data.lightLux.toFixed(1);
 }
-
 function updateControls(data) {
+    // ... (all your existing control logic) ...
     modeToggle.checked = (data.mode === "Manual");
     
     if (data.fan) {
@@ -158,8 +149,8 @@ function updateControls(data) {
         lightControl.classList.add('disabled');
     }
 }
-
 function toggleFan() {
+    // ... (your existing toggleFan function) ...
     if (modeToggle.checked) {
         var message = new Paho.MQTT.Message("fan-toggle");
         message.destinationName = "project/control";
@@ -168,8 +159,8 @@ function toggleFan() {
         alert("Switch to Manual mode to control the fan.");
     }
 }
-
 function toggleLight() {
+    // ... (your existing toggleLight function) ...
     if (modeToggle.checked) {
         var message = new Paho.MQTT.Message("light-toggle");
         message.destinationName = "project/control";
@@ -178,32 +169,28 @@ function toggleLight() {
         alert("Switch to Manual mode to control the light.");
     }
 }
-
 function toggleMode() {
+    // ... (your existing toggleMode function) ...
     var message = new Paho.MQTT.Message("mode-toggle");
     message.destinationName = "project/control";
     client.send(message);
 }
 
 // -------------------------------------------------------------------
-// --- Page Load ---
+// --- Page Load (Updated) ---
 // -------------------------------------------------------------------
-
 window.addEventListener('load', () => {
-    // Start MQTT
+    // Start MQTT connection (Existing)
     connectMqtt();
     
-    // Add listener for the mode toggle
+    // Add listener for the mode toggle (Existing)
     modeToggle.addEventListener("change", toggleMode);
 
-    // --- Add Listeners for new Surveillance controls ---
-    setFeedUrlButton.addEventListener('click', setFeedUrl);
-    liveFeed.addEventListener('error', handleFeedError);
-
-    // --- Load saved URL from browser memory ---
-    const savedUrl = localStorage.getItem(STORAGE_KEY);
-    if (savedUrl) {
-        feedUrlInput.value = savedUrl;
-        liveFeed.src = savedUrl + "/video";
-    }
+    // REMOVE all the old 'setFeedUrlButton' and 'localStorage' listeners.
+    // The video starts automatically now.
+    
+    // Add an error handler for the video feed
+    liveFeed.addEventListener('error', () => {
+        liveFeed.alt = 'Error in video stream. Reconnecting...';
+    });
 });
