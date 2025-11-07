@@ -24,52 +24,41 @@
 
         <div id="dashboard-view">
             <div class="grid">
-                
                 <div class="card">
-                    <h2>🌡️ Environment</h2>
+                    <h2>🌡️ Indoor</h2>
                     <div class="sensor-row">
-                        <span class="sensor-label">Indoor Temp</span>
-                        <span class="sensor-value"><span id="dht_temp">--</span><span class="sensor-unit">°C</span></span>
-                    </div>
-                    <div class="sensor-row">
-                        <span class="sensor-label">Outdoor Temp</span>
-                        <span class="sensor-value"><span id="bmp_temp">--</span><span class="sensor-unit">°C</span></span>
+                        <span class="sensor-label">Temperature</span>
+                        <span class="sensor-value"><span id="insideTemp">--</span><span class="sensor-unit">°C</span></span>
                     </div>
                     <div class="sensor-row">
                         <span class="sensor-label">Humidity</span>
-                        <span class="sensor-value"><span id="dht_humidity">--</span><span class="sensor-unit">%</span></span>
-                    </div>
-                    <div class="sensor-row">
-                        <span class="sensor-label">Pressure</span>
-                        <span class="sensor-value"><span id="pressure_hpa">--</span><span class="sensor-unit">hPa</span></span>
+                        <span class="sensor-value"><span id="insideHum">--</span><span class="sensor-unit">%</span></span>
                     </div>
                 </div>
-                
+                <div class="card">
+                    <h2>🌍 Outdoor</h2>
+                    <div class="sensor-row">
+                        <span class="sensor-label">Temperature</span>
+                        <span class="sensor-value"><span id="outsideTemp">--</span><span class="sensor-unit">°C</span></span>
+                    </div>
+                    <div class="sensor-row">
+                        <span class="sensor-label">Humidity</span>
+                        <span class="sensor-value"><span id="outsideHum">--</span><span class="sensor-unit">%</span></span>
+                    </div>
+                </div>
                 <div class="card">
                     <h2>📊 Atmosphere</h2>
                     <div class="sensor-row">
-                        <span class="sensor-label">Light (LDR)</span>
-                        <span class="sensor-value"><span id="lightPercent">--</span><span class="sensor-unit">%</span></span>
+                        <span class="sensor-label">Pressure</span>
+                        <span class="sensor-value"><span id="outsidePress">--</span><span class="sensor-unit">hPa</span></span>
                     </div>
                     <div class="sensor-row">
-                        <span class="sensor-label">Air Quality (MQ135)</span>
-                        <span class="sensor-value"><span id="mq135">--</span><span class="sensor-unit"></span></span>
+                        <span class="sensor-label">Light</span>
+                        <span class="sensor-value"><span id="lightLux">--</span><span class="sensor-unit">lux</span></span>
                     </div>
                 </div>
-
-                <div class="card">
-                    <h2>🔑 Access Control</h2>
-                    <div class="sensor-row">
-                        <span class="sensor-label">Door Status</span>
-                        <span class="sensor-value"><span id="door">--</span></span>
-                    </div>
-                    <div class="sensor-row">
-                        <span class="sensor-label">Last RFID Scanned</span>
-                        <span class="sensor-value" id="lastRfid" style="font-size: 16px; color: #888;">--</span>
-                    </div>
-                </div>
-
-            </div> <div class="control-panel" id="control-panel">
+            </div>
+            <div class="control-panel" id="control-panel">
                 <div class="mode-switch">
                     <h2>⚙️ Control Panel</h2>
                     <div class="toggle-group">
@@ -92,26 +81,25 @@
                         <div class="control-name">Light</div>
                         <div class="control-status" id="light-status">OFF</div>
                     </div>
-                    <div class="control-item" id="door-control" onclick="toggleDoor()">
-                        <div class="control-icon">🔓</div>
-                        <div class="control-name">Unlock Door</div>
-                        <div class="control-status" id="door-status">Locked</div>
-                    </div>
-                </div>
-            </div>
-        </div> <div id="surveillance-view" style="display: none;">
-            <div class="video-card">
-                <h2>📹 Live Camera Feed</h2>
-                <div class="video-container" style="text-align:center;">
-                    <img id="liveFeed" 
-                         alt="Connecting to video feed..."
-                         style="width:90%;max-width:700px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.3);" 
-                         referrerpolicy="no-referrer">
                 </div>
             </div>
         </div>
 
-    </div> <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.js"></script>
+<div id="surveillance-view" style="display: none;">
+    <div class="video-card">
+        <h2>📹 Live Camera Feed</h2>
+        <div class="video-container" style="text-align:center;">
+            <img id="liveFeed" 
+                 alt="Connecting to video feed..."
+                 style="width:90%;max-width:700px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.3);" 
+                 referrerpolicy="no-referrer">
+        </div>
+    </div>
+</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.js"></script>
     <script src="script.js"></script>
+
 </body>
 </html>
