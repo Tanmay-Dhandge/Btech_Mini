@@ -1,17 +1,7 @@
-// --- ⚠️ 1. CONFIGURE YOUR MQTT BROKER (Existing Code) ⚠️ ---
-const MQTT_BROKER_URL = "afc8a0ac2ccf462c8f92b932403518df.s1.eu.hivemq.cloud";
-const MQTT_PORT = 8884; // Your WebSocket port (usually 8884 for HiveMQ)
-const MQTT_USER = "hivemq.webclient.1761751067946";
-const MQTT_PASS = "wy.b7f8cB*0GTUW&4Ha:";
-
-// --- ⚠️ 2. CONFIGURE YOUR RENDER BACKEND (Existing Code) ⚠️ ---
+// --- ⚠️ 1. CONFIGURE YOUR RENDER BACKEND ⚠️ ---
+// This is now the ONLY server we connect to
 const RENDER_BACKEND_URL = "https://live-videofeed.onrender.com";
 // -----------------------------------------------------
-
-// --- MQTT Client (Existing Code) ---
-var client = new Paho.MQTT.Client(MQTT_BROKER_URL, MQTT_PORT, "web-client-" + parseInt(Math.random() * 100));
-client.onConnectionLost = onConnectionLost;
-client.onMessageArrived = onMessageArrived;
 
 // --- DOM Elements ---
 let statusText = document.getElementById('status');
@@ -26,7 +16,6 @@ let fanStatus = document.getElementById("fan-status");
 let lightStatus = document.getElementById("light-status");
 let doorStatus = document.getElementById("door-status");
 let modeToggle = document.getElementById("mode-toggle");
-
 
 // -------------------------------------------------------------------
 // --- Page Navigation (Existing Code) ---
@@ -46,73 +35,67 @@ function showView(viewName) {
 }
 
 // -------------------------------------------------------------------
-// --- Socket.IO Video Logic (Existing Code) ---
+// --- Single Socket.IO Connection for EVERYTHING ---
 // -------------------------------------------------------------------
-const videoSocket = io(RENDER_BACKEND_URL);
+const socket = io(RENDER_BACKEND_URL);
 
-videoSocket.on('connect', () => {
-    console.log('✅ Connected to Render video socket.');
+// --- Connection Status Handlers ---
+socket.on('connect', () => {
+    console.log('✅ Connected to Render server.');
+    statusText.textContent = "Connected";
+    statusDot.style.background = "#10b981"; // Green
     liveFeed.alt = "Connected, waiting for video stream...";
 });
-videoSocket.on('disconnect', () => {
-    console.log('❌ Disconnected from Render video socket.');
+
+socket.on('disconnect', () => {
+    console.log('❌ Disconnected from Render server.');
+    statusText.textContent = "Disconnected";
+    statusDot.style.background = "#ef4444"; // Red
     liveFeed.alt = "Feed disconnected. Trying to reconnect...";
 });
-videoSocket.on('new_frame_for_viewers', (data) => {
+
+// --- Event Listeners from Server ---
+
+// 1. Listen for Video
+socket.on('new_frame_for_viewers', (data) => {
     liveFeed.src = 'data:image/jpeg;base64,' + data.frame;
 });
 
-// -------------------------------------------------------------------
-// --- MQTT Logic (UPDATED) ---
-// -------------------------------------------------------------------
-function connectMqtt() {
-    console.log("Connecting to MQTT broker...");
-    statusText.textContent = "Connecting...";
-    statusDot.style.background = "#f59e0b"; // Yellow
-    client.connect({
-        userName: MQTT_USER,
-        password: MQTT_PASS,
-        useSSL: true,
-        onSuccess: onConnect,
-        onFailure: onConnectionLost
-    });
-}
-function onConnect() {
-    console.log("✅ Connected to MQTT");
-    statusText.textContent = "Connected";
-    statusDot.style.background = "#10b981"; // Green
-    // Subscribe to all topics
-    client.subscribe("project/sensors");
-    client.subscribe("project/status");
-    client.subscribe("project/rfid"); // <-- NEW
-}
-function onConnectionLost(responseObject) {
-    console.log("❌ MQTT Connection lost: " + responseObject.errorMessage);
-    statusText.textContent = "Disconnected";
-    statusDot.style.background = "#ef4444"; // Red
-    setTimeout(connectMqtt, 3000);
-}
-function onMessageArrived(message) {
+// 2. Listen for Sensor Data
+socket.on('new_sensor_data', (data) => {
+    // Data is a JSON string from ESP32, parse it
     try {
-        const data = JSON.parse(message.payloadString);
-        
-        if (message.destinationName === "project/sensors") {
-            updateSensorReadings(data);
-        } else if (message.destinationName === "project/status") {
-            updateControls(data);
-        } else if (message.destinationName === "project/rfid") {
-            updateRfidStatus(data);
-        }
-
+        const sensorData = JSON.parse(data);
+        updateSensorReadings(sensorData);
     } catch (e) {
-        console.error("Error parsing JSON message:", e, message.payloadString);
+        console.error("Error parsing sensor data:", e, data);
     }
-}
+});
 
-// --- MQTT Helper Functions (UPDATED) ---
+// 3. Listen for Control Status Data
+socket.on('new_status_data', (data) => {
+    try {
+        const statusData = JSON.parse(data);
+        updateControls(statusData);
+    } catch (e) {
+        console.error("Error parsing status data:", e, data);
+    }
+});
+
+// 4. Listen for RFID Data
+socket.on('new_rfid_data', (data) => {
+    try {
+        const rfidData = JSON.parse(data);
+        updateRfidStatus(rfidData);
+    } catch (e) {
+        console.error("Error parsing rfid data:", e, data);
+    }
+});
+
+
+// --- Helper Functions to Update Page ---
 
 function updateSensorReadings(data) {
-    // Helper to safely update text
     const updateText = (id, value, decimals = 1) => {
         const el = document.getElementById(id);
         if (el && value != null) el.textContent = value.toFixed(decimals);
@@ -165,7 +148,6 @@ function updateControls(data) {
     }
 }
 
-// NEW function to handle RFID topic
 function updateRfidStatus(data) {
     const rfidStatusEl = document.getElementById('door');
     const rfidUidEl = document.getElementById('lastRfid');
@@ -180,16 +162,14 @@ function updateRfidStatus(data) {
     rfidUidEl.textContent = data.uid;
 }
 
-// --- MQTT Publisher Functions (UPDATED) ---
+// --- Publisher Functions (Sending to Render) ---
 
-function publishControl(message) {
-    if (!client.isConnected()) {
+function publishControl(command) {
+    if (!socket.connected) {
         alert("Not connected to control server.");
         return;
     }
-    var m = new Paho.MQTT.Message(message);
-    m.destinationName = "project/control";
-    client.send(m);
+    socket.emit("control_command_from_web", command);
 }
 
 function toggleFan() {
@@ -208,7 +188,6 @@ function toggleLight() {
     }
 }
 
-// NEW function for door
 function toggleDoor() {
      if (modeToggle.checked) {
         publishControl("door-toggle");
@@ -222,12 +201,9 @@ function toggleMode() {
 }
 
 // -------------------------------------------------------------------
-// --- Page Load (UPDATED) ---
+// --- Page Load ---
 // -------------------------------------------------------------------
 window.addEventListener('load', () => {
-    // Start MQTT connection
-    connectMqtt();
-    
     // Add listener for the mode toggle
     modeToggle.addEventListener("change", toggleMode);
     
@@ -235,4 +211,6 @@ window.addEventListener('load', () => {
     liveFeed.addEventListener('error', () => {
         liveFeed.alt = 'Error in video stream. Reconnecting...';
     });
+    
+    // NOTE: All connections now start automatically. No connectMqtt() needed.
 });
